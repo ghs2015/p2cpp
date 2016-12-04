@@ -1,23 +1,24 @@
-#include <STLeader.h>
+#include "STLeader.h"
 #include <iostream>
 
 STLeader* STLeader::stlptr = 0;
-//Constructor
-STLeader::STLeader(){
-}
-//Destructor
-STLeader::~STLeader(){
-}
+
 //Get the global pointer to the only instance of STLeader.
 STLeader* STLeader::get_stlptr(){
 	if (!stlptr){
-		stlptr = new STLeader();
-		stlptr->currentScope = 0;
+		stlptr = new STLeader;	
+		stlptr->set_scope(0);
+		SymbolTable st(0);
+		stlptr->add_st(st);
 	}
 	return stlptr;
 }
 
-void STLeader:: add_st(SymbolTable& st){
+void STLeader::set_scope(int s){
+	currentScope = s;
+}
+
+void STLeader:: add_st(SymbolTable st){
 	sts[st.get_scope()] = st;
 }
 //i means the deepest scope containing the symbol, if not, i is -1.
@@ -34,13 +35,18 @@ int STLeader::find_symbol(string name){
 	return i;
 }
 
-*Node STLeader::lookup_symbol(string name){
+Ast* STLeader::lookup_symbol(string name){
 	return stv[find_symbol(name)].lookup_symbol(name);
 }
 
+void STLeader::update_symbol(string name, Ast* n){
+	sts[currentScope].update_symbol(name, n);
+}
+
+
 void STLeader::pop_scope(){
 	if (currentScope>=1){
-		stv.pop_back(sts[currentScope]);
+		stv.pop_back();
 		currentScope-=1;
 	}
 }
@@ -48,6 +54,10 @@ void STLeader::pop_scope(){
 void STLeader::push_scope(){
 	currentScope+=1;
 	stv.push_back(sts[currentScope]);
+}
+
+int STLeader::get_scope(){
+	return currentScope;
 }
 
 void STLeader::free_stl( ){	
@@ -58,9 +68,9 @@ void STLeader::free_stl( ){
 	}
 }
 
-void STLeader::print_st(){
-	for(map<int, SymbolTable> >::const_iterator it = table.begin(); it != table.end(); ++it)
-		{
-			cout << it->first << " " << it->second.get_scope() << "\n";
-		}
-}
+// void STLeader::print_st(){
+// 	for(map<int, SymbolTable> >::const_iterator it = table.begin(); it != table.end(); ++it)
+// 		{
+// 			cout << it->first << " " << it->second.get_scope() << "\n";
+// 		}
+// }
