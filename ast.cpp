@@ -8,6 +8,8 @@
 #  include "STLeader.h"
 
 extern STLeader* stlptr;
+extern char rt;
+extern double v;
 
 //TODO!! Add zero exception 这里的两个switch怪怪的，好像有问题啊！！
 double evalFloat(Ast *a){
@@ -153,4 +155,62 @@ void treeFree(Ast *a) {
   default: std::cout << "internal error: bad node in treeFree()"
                 << a->getNodetype() << std::endl;;
   }
+}
+
+Ast* evalFunction(Ast* astf){
+	//！！这个函数君的人生目标就是运行一遍函数中的所有语句：
+	//目前只包括赋值语句和打印语句。然后返回一个值。如果返回值为空，那就返回一个Ast空空屁。
+	//不然就返回一个AstReturn.就用这个颜色一会吧，我打的字比较清楚。
+	//$开始一个新的scope
+	stlptr->push_scope();
+	//$尸位素餐的代码；
+
+	//我感觉还得加个赋值Node。AST家族不断发展壮大啊，威胁到地球和平了。。。
+	//好像还要用递归，哇嘎嘎，行不行啊，少废话了，快写！挂科了一会。。。
+	//$遍历astf->vec里的所有AST NODE，用eval()进行逐条执行。
+
+
+	//$关闭当前scope
+
+}
+//！！这家伙好像一个皮包公司啊。。。
+//！！怎样不用皮包+多条件判断？用polymophism？把返回类型等属性封装到类属性里，返回一个类的指针就行。
+//！！后面儿有时间再重构吧，代码会简洁直观不少。
+Ast* eval(Ast* ast){
+	//for function node
+	if(ast->getNodetype()=='F'){
+		return evalFunction(ast);
+	}
+	//for assign node, 这家伙还需要用到符号表吧？？用就用吧，反正是全局的。局座。。。
+	//你真是把这当弹幕了。。。。
+	if(ast->getNodetype()=='A'){
+		//人生目标：更新当前符号表
+		//取得当前符号表.这两个动作似曾相识在parser里，待我去找来直接copy在这里！
+		//更新当前符号表中的符号X（左边的哥们儿）的值为右边的哥们儿的值。
+		//要不要给rt和v做个extern声明啊？？
+		//$!!这里要注意加意外判断，比如左边是右值。
+		rt = ast->getRight()->getReturntype();
+		if (rt=='i'){v = eval(ast->getRight())->getIntNumber();}
+		else if(rt=='f'){v = eval(ast->getRight())->getFloatNumber();}
+		else { throw "What are you doing with the assign node?"; }
+		ast->getLeft()->setReturntype(rt);
+		ast->getLeft()->set_value(v);
+		stlptr->update_symbol(ast->getLeft()->getName(), ast->getLeft());		
+	}
+	//for print node
+	if(ast->getNodetype()=='P'){
+		//！！需要operator overload啊
+		std::cout<<eval(ast->get_toPrint())<<std::endl;
+	}
+	//for void node
+	if(ast->getNodetype()=='0'){
+		//啥也不干可以不？
+	}
+	//for int return type, char nodetype, int id, char rt, int n)
+	if(ast->getReturntype()=='i'){
+		return new AstInteger('I', ast->getNodeid(),'i', evalInt(ast) );
+	}
+	if(ast->getReturntype()=='f'){
+		return new AstFloat('K', ast->getNodeid(), 'f', evalFloat(ast) );
+	}
 }

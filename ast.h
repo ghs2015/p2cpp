@@ -6,6 +6,7 @@
 #define _AST_H_
 
 #include <string>
+#include <vector>
 extern void yyerror(const char*);
 extern void yyerror(const char*, const char);
 
@@ -28,7 +29,10 @@ class Ast{
 
 	  virtual void set_value(double v) {throw std::string("No setter");}
 	  virtual double get_value() const {throw std::string("No Value");}
-
+	  virtual std::vector<Ast*> getVec() const {throw std::string("No Vector"); }
+	  virtual void push_back(Ast* ast) {throw std::string("No push_back()"); }
+	  virtual void print_ast() { throw std::string("No print_ast()"); }
+	  virtual Ast* get_toPrint() { throw std::string("No toPrint"); }
 	private:
 	  char nodetype;
 	  int nodeid;
@@ -81,10 +85,42 @@ class AstFunction : public Ast {
 	public:
 	  AstFunction(char nodetype, int id, char rt, std::string n) : Ast(nodetype,id,rt), name(n){}
 	  virtual ~AstFunction(){}
-	  virtual std::string getFunction() const { return name; }
+	  virtual std::string getName() const { return name; }
+	  virtual std::vector<Ast*> getVec() const {return vec; }
+	  virtual void push_back(Ast* ast) {vec.push_back(ast);}
 	private:
 	  std::string name;
+	  //是一个一个往里放呢？还是一起往里放？一个一个吧。
+	  std::vector<Ast*> vec; //!!把赋值语句和打印语句都放在一起，这样按顺序执行就不会有XX影响
 };
+
+class AstPrint : public Ast {
+    public:
+	  AstPrint(char nodetype,int id,char rt,std::string n,Ast* ast) : Ast(nodetype,id,rt), name(n),toPrint(ast) {}
+	  virtual ~AstPrint(){}
+	  //!!这要对<<进行操作符重载啊。。。~0.5h
+	  //！！还是再eval()里面print吧
+	  //virtual void print_ast() { std::cout<<eval(toPrint)<<std:endl; }
+	private:
+	  std::string name;
+	  Ast* toPrint;
+};
+//!! To validate
+class AstAss: public Ast {
+    public:
+	  AstAss(char nodetype,int id,char rt,\
+	  	       std::string n, Ast* la, Ast* ra): \
+	                Ast(nodetype,id,rt), name(n),l(la),r(ra) {}
+	  virtual ~AstAss(){}
+	  virtual Ast* getLeft() const  { return l; }
+	  virtual Ast* getRight() const { return r; }
+	private:
+	  std::string name;
+	  Ast* l;
+	  Ast* r;
+};
+
+
 //!!To do
 class AstSuite : public Ast {
 	public:
@@ -126,8 +162,14 @@ class AstVoid : public Ast {
 //!!这里可以统一用一个evalAST~1h
 double evalFloat(Ast*);
 int evalInt(Ast*);
-void eval(Ast*);
+//！！要定义eval啊
+Ast* eval(Ast*);
+Ast* evalFunction(AstFunction*);//！！用Ast作为返回值，可以想存啥，就存啥！早咋不这么用呢？。。。
 void treeFree(Ast*); // delete and free an AST 
+
+
+
+
 
 #endif
 // functionNode,
