@@ -192,23 +192,28 @@ expr_stmt // Used in: small_stmt
 }
 | testlist star_EQUAL
 {    
-		//std::cout<<"In testlist star_EQUAL"<<std::endl;
-		//if ($2->getReturntype()=='u') {std::cout<<"HAHAHAHAHA ~!"<<std::endl;}
-		// SymbolTable* stptr = SymbolTable::get_table();
 		if($1->getNodetype()=='N')  //Handle the exception.
-		//update_symbol_info(string name, string type, string value);
 		{
 			rt = $2->getReturntype();
 
-			if (rt=='i')        { v =evalInt($2);    }
-			else if(rt == 'f')	{ v = evalFloat($2); }
+			if (rt=='i')        { v = evalInt($2);    }
+			else if(rt == 'f')	{ 
+				                   v = evalFloat($2);
+				                   // std::cout<<"evalFloat($2): "<<v <<std::endl; 
+				                }
 			else { throw "NameError: the name is not defined"; }
 			//！！这里果然是直接用指针去改的符号表里面的内容，不是很稳妥，后面可以考虑用符号表改
 			//！！上面的高级赋值也是一样的。
 			$1->setReturntype(rt);
+			//！！注意，这里赋值浮点数可能有问题！！
 			$1->set_value(v);
+			// std::cout<<"$1->set_value(v)， v = "<<v<<", $1->get_value()= "<<$1->get_value() <<std::endl;
 			//看好了，这里要更新符号表了！！(⊙o⊙)
 			stlptr->update_symbol($1->getName(), $1);
+			//！！这里看下存表情况
+			// std::cout<<stlptr->lookup_symbol($1->getName())->getReturntype()<<std::endl;
+			// std::cout<<stlptr->lookup_symbol($1->getName())->get_value()<<std::endl;
+			// std::cout<<stlptr->lookup_symbol($1->getName())->getName()<<std::endl;
 		}
 		else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
 		{
@@ -620,9 +625,7 @@ power // Used in: factor
 	rt = ($1->getReturntype()=='i'&&$4->getReturntype()=='i'?'i':'f');
 	if(rt=='i'&&evalInt($4)<0){
 		rt = 'f';
-			//std::cout<<evalInt($4)<<std::endl;
 	}
-		//std::cout<<rt<<std::endl;
 	$$ = new AstNode('^', nodeid++, rt,$1,$4);
 }
 | atom star_trailer
@@ -656,7 +659,10 @@ atom // Used in: power //TO ADD AST VERSION.!!
 			$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
 		}
 		}		     		      
-		| FLOATNUMBER {$$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); } 
+		| FLOATNUMBER {
+			            $$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); 
+	                    // std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext);
+	                  } 
 		| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext)); } 
 	| plus_STRING {$$ = $1;} //!!TO MODIFY
 	;

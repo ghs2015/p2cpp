@@ -29,7 +29,6 @@ class Ast{
 	  virtual void set_value(double v) {throw std::string("No setter");}
 	  virtual double get_value() const {throw std::string("No Value");}
 
-
 	private:
 	  char nodetype;
 	  int nodeid;

@@ -53,7 +53,8 @@ double evalFloat(Ast *a){
     //           v = stod(stptr->lookup_symbol(a->getName()).second); 
     //           break; 
 	case 'N': if(stlptr->find_symbol(a->getName())==-1) {throw "NameError: the name is not defined"; }
-            v = (stlptr->lookup_symbol(a->getName()))->get_value();  
+              v = (stlptr->lookup_symbol(a->getName()))->get_value();
+              break;
 
   //case 'I': v = a->getIntNumber(); break;
     case '+': v = l + r; break;
