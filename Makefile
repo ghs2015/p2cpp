@@ -8,7 +8,7 @@ LEXFLAGS = -Wno-unused
 LEXDEBUG =
 YACCDEBUG = -vtd
 
-OBJS = main.o SymbolTable.o ast.o parse.tab.o lex.yy.o STLeader.o
+OBJS = main.o STLeader.o SymbolTable.o ast.o parse.tab.o lex.yy.o 
 
 run: $(OBJS)
 	$(CCC) $(CFLAGS) -o run $(OBJS)
@@ -19,7 +19,7 @@ main.o: main.cpp parse.y scan.l parse.tab.cpp lex.yy.cpp SymbolTable.o STLeader.
 SymbolTable.o: SymbolTable.cpp SymbolTable.h
 	$(CCC) $(CFLAGS) -c SymbolTable.cpp
 
-STLeader.o: STLeader.cpp STLeader.h SymbolTable.h
+STLeader.o: STLeader.cpp STLeader.h SymbolTable.h ast.h
 	$(CCC) $(CFLAGS) -c STLeader.cpp
 
 ast.o: ast.cpp ast.h SymbolTable.h STLeader.h

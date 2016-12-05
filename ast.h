@@ -2,6 +2,8 @@
 //  From "flex & bison", fb3-1, by John Levine
 //  Adapted by Brian Malloy
 //  Further adapted by Zhang Xiang
+#ifndef _AST_H_
+#define _AST_H_
 
 #include <string>
 extern void yyerror(const char*);
@@ -128,7 +130,7 @@ int evalInt(Ast*);
 void eval(Ast*);
 void treeFree(Ast*); // delete and free an AST 
 
-
+#endif
 // functionNode,
 // suiteNode, suite 是什么神？
 // returnNode, 

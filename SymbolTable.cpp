@@ -1,10 +1,12 @@
 #include "SymbolTable.h"
 
-//constructor
-SymbolTable:: SymbolTable(int arg_scope):scope(arg_scope){};
-//descturctor
-SymbolTable:: ~SymbolTable(){};
-
+//constructor and descturctor
+SymbolTable:: SymbolTable(){}
+SymbolTable:: SymbolTable(int arg_scope):scope(arg_scope){}
+SymbolTable:: ~SymbolTable(){}
+SymbolTable:: SymbolTable(const SymbolTable &obj){
+	scope = obj.get_scope();
+}
 bool SymbolTable::find_symbol(string name) 
 {
 	bool Exist = false;
@@ -16,27 +18,19 @@ bool SymbolTable::find_symbol(string name)
 	return Exist;
 }
 
-void SymbolTable::update_symbol(string name, Ast* nptr) 	
-{
-	table[name] = nptr;
-	//this->print_table();
-}
-
 Ast* SymbolTable::lookup_symbol (string name) 
 {
 	return table[name];
 }
 
-int SymbolTable::get_scope(){
+void SymbolTable::update_symbol(string name, Ast* n) 	
+{	
+	table[name] = n;
+}
+
+int SymbolTable::get_scope() const{
 	return scope;
 }
 void SymbolTable::set_scope(int s){
 	scope = s;
 }
-// void SymbolTable::print_table() 
-// {
-// 	for(map<string, Ast*>::const_iterator it = table.begin(); it != table.end(); ++it)
-// 		{
-// 			cout << it->first << " " << it->second.type << endl;
-// 		}
-// }

@@ -8,7 +8,7 @@
   // #include "SymbolTable.h"
   #include "ast.h"
   #include <iomanip>
-  
+
 	//class Ast;
     int nodeid = 0; //Give each node a unique id 
     char rt; //Return type
@@ -203,10 +203,12 @@ expr_stmt // Used in: small_stmt
 			if (rt=='i')        { v =evalInt($2);    }
 			else if(rt == 'f')	{ v = evalFloat($2); }
 			else { throw "NameError: the name is not defined"; }
+			//！！这里果然是直接用指针去改的符号表里面的内容，不是很稳妥，后面可以考虑用符号表改
+			//！！上面的高级赋值也是一样的。
 
 			$1->setReturntype(rt);
 			$1->set_value(v);
-						
+
 		}
 		else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
 		{
@@ -224,10 +226,12 @@ star_EQUAL // Used in: expr_stmt, star_EQUAL
 	{			
 		$2 = $3;
 		$$ = $2;
+		std::cout<<"$2->getNodetype()=='N'&&$2->getReturntype()=='u'"<< yytext <<std::endl;
 	}
 	else 
 	{
 		$$ = $2;
+		std::cout<<"$$ = $2;"<< yytext <<std::endl;
 	}		
 }
 | %empty 
@@ -635,16 +639,22 @@ atom // Used in: power //TO ADD AST VERSION.!!
 	| NAME { 
 		//！！应该在这里做查询符号，而不是上面，因为那时候已经有了	。。。
 		STLeader* stlptr = STLeader::get_stlptr();
+		//!!这里读入变量名应该没问题。
+		std::cout<<yytext<<std::endl;
 		if((stlptr->find_symbol(yytext))>=0)
 		{
-		       	  //!!这里可能需要用deep copy~0.5h 返回一个新Node.现场来一个。
+			std::cout<<"(stlptr->find_symbol(yytext))>=0"<<std::endl;
+		    //!!这里可能需要用deep copy~0.5h 返回一个新Node.现场来一个。
 			rt = (stlptr->lookup_symbol(yytext))->getReturntype();
 			v =  (stlptr->lookup_symbol(yytext))->get_value();
 			$$ = new AstName('N', nodeid++, rt, yytext, v);
 		}
 		else
 		{
-			$$ = new AstName('N', nodeid++, 'u', yytext, 0); }
+			//呦呵，竟然没有在这存变量进符号表！可以啊！！原来是在上面存，结果没存进去啊！
+			std::cout<<"(stlptr->find_symbol(yytext))<0"<<std::endl;
+			$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
+		}
 		}		     		      
 		| FLOATNUMBER {$$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); } 
 		| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext)); } 

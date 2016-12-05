@@ -1,6 +1,7 @@
 #include <iostream>
 #include "SymbolTable.h"
 #include "STLeader.h"
+#include "ast.h"
 extern int yyparse();
 
 int main() {

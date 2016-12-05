@@ -52,8 +52,8 @@ double evalFloat(Ast *a){
     // case 'N': if (!stptr->find_symbol(a->getName())) { throw "NameError: the name is not defined"; }
     //           v = stod(stptr->lookup_symbol(a->getName()).second); 
     //           break; 
-	case 'N': if(stlptr->find_symbol(a->getName)==-1) {throw "NameError: the name is not defined"; }
-            v = (stlptr->lookup_symbol(a->getName))->get_value();  
+	case 'N': if(stlptr->find_symbol(a->getName())==-1) {throw "NameError: the name is not defined"; }
+            v = (stlptr->lookup_symbol(a->getName()))->get_value();  
 
   //case 'I': v = a->getIntNumber(); break;
     case '+': v = l + r; break;
@@ -91,8 +91,8 @@ int evalInt(Ast *a){
   // case 'N': if (!stptr->find_symbol(a->getName())) { throw "NameError: the name is not defined"; }
   //           v = stod(stptr->lookup_symbol(a->getName()).second); //！！你在外面能知道这个变量的类型吗？如果赋过值，我猜可以，后面论证下。
   //           break; //！！这里能直接用stptr吗？在parser里加了声明，不知道有效果木有。
-  case 'N': if(stlptr->find_symbol(a->getName)==-1) {throw "NameError: the name is not defined"; }
-            v = (int)(stlptr->lookup_symbol(a->getName))->get_value();
+  case 'N': if(stlptr->find_symbol(a->getName())==-1) {throw "NameError: the name is not defined"; }
+            v = (int)(stlptr->lookup_symbol(a->getName()))->get_value();
             break;
 
   case '+': v = evalInt(a->getLeft()) + evalInt(a->getRight()); break;

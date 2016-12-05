@@ -1,6 +1,7 @@
 #include "STLeader.h"
 #include <iostream>
 
+//??Significance 
 STLeader* STLeader::stlptr = 0;
 
 //Get the global pointer to the only instance of STLeader.
@@ -18,14 +19,17 @@ void STLeader::set_scope(int s){
 	currentScope = s;
 }
 
-void STLeader:: add_st(SymbolTable st){
-	sts[st.get_scope()] = st;
+void STLeader:: add_st(const SymbolTable& st){
+	 sts[st.get_scope()] = st;
 }
+
 //i means the deepest scope containing the symbol, if not, i is -1.
 int STLeader::find_symbol(string name){
 	int i = currentScope;
+	SymbolTable* stptr;
 	while (i>=0){
-		if (stv[i].find_symbol(name)){
+		stptr = &sts[i];
+		if (stptr->find_symbol(name)){
 			break;
 		}
 		else{
@@ -34,18 +38,19 @@ int STLeader::find_symbol(string name){
 	}
 	return i;
 }
-
+//Return the pointer associated with the name in the symbol table
 Ast* STLeader::lookup_symbol(string name){
-	return stv[find_symbol(name)].lookup_symbol(name);
+	Ast* ast;
+	ast = sts[find_symbol(name)].lookup_symbol(name);
+	return ast;
 }
 
 void STLeader::update_symbol(string name, Ast* n){
-	sts[currentScope].update_symbol(name, n);
+	 sts[currentScope].update_symbol(name, n);
 }
 
-
 void STLeader::pop_scope(){
-	if (currentScope>=1){
+	if (currentScope >= 1){
 		stv.pop_back();
 		currentScope-=1;
 	}
@@ -64,13 +69,6 @@ void STLeader::free_stl( ){
 	if(stlptr){ 
 		delete stlptr;
 		stlptr = 0;
-		//std::cout<<"free_table() works!"<<std::endl;
 	}
 }
 
-// void STLeader::print_st(){
-// 	for(map<int, SymbolTable> >::const_iterator it = table.begin(); it != table.end(); ++it)
-// 		{
-// 			cout << it->first << " " << it->second.get_scope() << "\n";
-// 		}
-// }
