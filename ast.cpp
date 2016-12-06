@@ -214,12 +214,17 @@ Ast* evalSuite(Ast* ast){
 //！！怎样不用皮包+多条件判断？用polymophism？把返回类型等属性封装到类属性里，返回一个类的指针就行。
 //！！后面儿有时间再重构吧，代码会简洁直观不少。
 Ast* eval(Ast* ast){
+       std:: cout<< "IN eval( )"<< std::endl;
+       std:: cout<< "node type:    "<< ast->getNodetype()      << std::endl;
+       std:: cout<< "return type:    "<<   ast->getReturntype()   << std::endl;
 	//for call function node
 	if(ast->getNodetype()=='C'){
+		std:: cout<< "evalCall(ast);"<< std::endl;
 		return evalCall(ast);
 	}
 	//for def function node
 	if(ast->getNodetype()=='F'){
+		std:: cout<< "evalFunction(ast);"<< std::endl;
 		return evalFunction(ast);
 	}
 	//for assign node, 这家伙还需要用到符号表吧？？用就用吧，反正是全局的。局座。。。
@@ -231,19 +236,21 @@ Ast* eval(Ast* ast){
 		//要不要给rt和v做个extern声明啊？？
 		//$!!这里要注意加意外判断，比如左边是右值。
 		rt = ast->getRight()->getReturntype();
-		if (rt=='i'){v = eval(ast->getRight())->getIntNumber();}
-		else if(rt=='f'){v = eval(ast->getRight())->getFloatNumber();}
-		else { throw "What are you doing with the assign node?"; }
+		if (rt=='i')          {v = eval(ast->getRight())->getIntNumber();}
+		else if(rt=='f')   {v = eval(ast->getRight())->getFloatNumber();}
+		else                 { throw "What are you doing with the assign node?"; }
 		ast->getLeft()->setReturntype(rt);
 		ast->getLeft()->set_value(v);
 		stlptr->update_symbol(ast->getLeft()->getName(), ast->getLeft());
-		return (new AstVoid('0', ast->getNodeid(), ast->getReturntype(), ast->getName()));
+		std:: cout<< "return (new AstVoid('0', ast->getNodeid(), ast->getReturntype(), ast->getName()));"<< std::endl;
+		return (new AstVoid('0', ast->getNodeid(), ast->getReturntype(), "ass"));
 	}
 	//for print node
 	if(ast->getNodetype()=='P'){
 		//需要operator overload啊,已经加了，安。。。
 		std::cout<<eval(ast->get_toPrint())<<std::endl;
-		return (new AstVoid('0', ast->getNodeid(), ast->getReturntype(), ast->getName()));
+		std:: cout<< "ast->getNodetype()=='P'"<< std::endl;
+		return (new AstVoid('0', ast->getNodeid(), ast->getReturntype(),"PPP"));
 	}
 	//for void node
 	if(ast->getNodetype()=='0'){
@@ -251,10 +258,13 @@ Ast* eval(Ast* ast){
 		return ast;
 	}
 	//for int return type, char nodetype, int id, char rt, int n)
+      //!!看起来是对于AstNode进行运算的，检查
 	if(ast->getReturntype()=='i'){
+		std:: cout<< "return new AstInteger('I', ast->getNodeid(),'i', evalInt(ast) );"<< std::endl;
 		return new AstInteger('I', ast->getNodeid(),'i', evalInt(ast) );
 	}
 	if(ast->getReturntype()=='f'){
+		std:: cout<< "return new AstFloat('K', ast->getNodeid(), 'f', evalFloat(ast) );"<< std::endl;
 		return new AstFloat('K', ast->getNodeid(), 'f', evalFloat(ast) );
 	}
 	else 
@@ -264,6 +274,7 @@ Ast* eval(Ast* ast){
 //operator overload is coming
 std::ostream& operator <<(std::ostream& os, const Ast * ast)
 {
+	std:: cout<< "IN std::ostream& operator <<(std::ostream& os, const Ast * ast)"<< std::endl;
 	switch (ast->getNodetype()) {
 		case 'I': 
 			os << (ast->getIntNumber());
@@ -273,7 +284,9 @@ std::ostream& operator <<(std::ostream& os, const Ast * ast)
 			break;
 		//！！理论上来说，evaluate之后不会出现N型了吧？
 		case 'N':
-			os<< (ast->get_value());
+			// os<< (ast->get_value());
+                  os<< stlptr->lookup_symbol(ast->getName())->get_value();
+                  // os<< (ast->getName());
 			break;
 		case '0':
 			break;
