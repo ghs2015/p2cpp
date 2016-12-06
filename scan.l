@@ -32,6 +32,7 @@
 #include "ast.h"
 #include "parse.tab.hpp"
 #include <stack>
+#include <string>
 #include <iostream>
   /* The scanner state: */
   static std::stack<int> indentations;
@@ -254,6 +255,7 @@ comment   #.*
 
 {name}     { 
              ++identifiers; 
+             *yylval.n = yytext;
              return NAME; 
            }
 

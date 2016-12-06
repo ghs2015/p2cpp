@@ -88,7 +88,7 @@ private:
 //!!Call node serves for updating the symbol table,nodetype='F'
 class AstFunction : public Ast {
 public:
-	AstFunction(char nodetype, int id, char rt, std::string n) : Ast(nodetype,id,rt), name(n){}
+	AstFunction(char nodetype, int id, char rt, std::string n, Ast* ast) : Ast(nodetype,id,rt), name(n), astSuite(ast){}
 	virtual ~AstFunction(){}
 	virtual std::string getName() const { return name; }
 	virtual Ast* get_suite() const { return astSuite; }

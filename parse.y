@@ -4,38 +4,38 @@
   #include <cmath>
   #include <math.h>
   #include <cassert>
+  #include <string>
   #include "STLeader.h"
   // #include "SymbolTable.h"
   #include "ast.h"
   #include <iomanip>
 
-	//class Ast;
+	
     int nodeid = 0; //Give each node a unique id 
     char rt; //Return type
     char nt; //Node type
     double v; //value of the variable
-
+    string fname;
+    std::vector<Ast* > vec;
     int yylex (void);
     extern int yylineno;
     extern char *yytext;
     void yyerror (char const *);
-    //!!??
     STLeader* stlptr = STLeader::get_stlptr();
-    // stlptr->set_scope(0);
-    // SymbolTable st(0);
-    // stlptr->add_st(st);
     %}
 
 //ZX+:Define types for the yylval
     %union {
     	Ast* ast;
-	//double d;
+	double d;    	
+    	char* n[512];
     	int i;
     }
 
 // 2 tokens, INTEGER and FLOAT X+
 //%token <d> FLOATNUMBER
 //%token <i> INTEGER
+    %token <n> NAME
 
 // 83 tokens, in alphabetical order:
     %token AMPEREQUAL AMPERSAND AND AS ASSERT AT BACKQUOTE BAR BREAK
@@ -44,7 +44,7 @@
     %token DOUBLESTAR DOUBLESTAREQUAL ELIF ELSE ENDMARKER EQEQUAL
     %token EQUAL EXCEPT EXEC FINALLY FOR FROM GLOBAL GREATER GREATEREQUAL GRLT
     %token IF IMPORT IN INDENT IS LAMBDA LBRACE LEFTSHIFT LEFTSHIFTEQUAL LESS
-    %token LESSEQUAL LPAR LSQB MINEQUAL MINUS NAME NEWLINE NOT NOTEQUAL 
+    %token LESSEQUAL LPAR LSQB MINEQUAL MINUS  NEWLINE NOT NOTEQUAL 
     %token OR PASS PERCENT PERCENTEQUAL PLUS PLUSEQUAL PRINT RAISE 
     %token RBRACE RETURN RIGHTSHIFT RIGHTSHIFTEQUAL RPAR RSQB 
     %token SEMI SLASH SLASHEQUAL STAR STAREQUAL
@@ -54,18 +54,19 @@
 
 //declare the types of tokens involved in the calculation. ZX+
 //print_stmt
-    %type <i> pick_unop pick_PLUS_MINUS pick_multop augassign 
-    %type <ast> pick_yield_expr_testlist pick_yield_expr_testlist_comp opt_yield_test testlist_comp testlist
+    %type <ast> start single_input file_input NEWLINE stmt small_stmt print_stmt star_NEWLINE_stmt simple_stmt
+    %type <i> pick_unop pick_PLUS_MINUS pick_multop augassign  
+    %type <ast> pick_yield_expr_testlist pick_yield_expr_testlist_comp opt_yield_test testlist_comp testlist funcdef
     %type <ast> opt_test test or_test and_test not_test comparison 
-    %type <ast> expr xor_expr and_expr shift_expr arith_expr 
+    %type <ast> expr xor_expr and_expr shift_expr arith_expr parameters
     %type <ast> term factor power atom listmaker dictorsetmaker 
-    %type <ast> expr_stmt star_EQUAL testlist1 plus_STRING
-    %type <ast> yield_expr lambdef opt_listmaker opt_dictorsetmaker 
+    %type <ast> expr_stmt star_EQUAL testlist1 plus_STRING suite plus_stmt global_stmt
+    %type <ast> yield_expr lambdef opt_listmaker opt_dictorsetmaker compound_stmt
     %%
 
     start
-    : file_input
-    | single_input
+    : file_input 
+    | single_input 
     ;
 //single_input // Used in: start
 //	: NEWLINE
@@ -74,8 +75,8 @@
 //	;
 
 single_input // Used in: start
-: NEWLINE
-| stmt 
+: NEWLINE {$$ = new AstVoid('0',++nodeid,'u',"NEWLINE");}
+| stmt {eval($1);}
 ;
 file_input // Used in: start
 : star_NEWLINE_stmt ENDMARKER
@@ -85,8 +86,8 @@ pick_NEWLINE_stmt // Used in: star_NEWLINE_stmt
 | stmt
 ;
 star_NEWLINE_stmt // Used in: file_input, star_NEWLINE_stmt
-: pick_NEWLINE_stmt star_NEWLINE_stmt
-| %empty
+: pick_NEWLINE_stmt star_NEWLINE_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| %empty {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 decorator // Used in: decorators
 : AT dotted_name LPAR opt_arglist RPAR NEWLINE
@@ -105,11 +106,33 @@ decorated // Used in: compound_stmt
 | decorators funcdef
 ;
 funcdef // Used in: decorated, compound_stmt
-: DEF NAME parameters COLON suite
+: DEF NAME 
+{
+	vec.erase(vec.begin(),vec.end());	
+} 
+parameters COLON suite 
+{
+	//copy the vec to suite's vector
+	std::vector<Ast* > :: iterator it;
+	it = vec.begin();
+	while (it!=vec.end())
+	{
+		if((*it)->getNodetype()=='R')
+		{
+			$6->set_return(*it);
+			break;
+		}
+		else{
+			$6->push_back(*it);
+			++it;
+		}		
+	}
+	$$ = new AstFunction('F', ++nodeid, 'U', *$2, $6);	 
+}
 ;
 parameters // Used in: funcdef
-: LPAR varargslist RPAR 
-| LPAR RPAR 
+: LPAR varargslist RPAR {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| LPAR RPAR  {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 varargslist // Used in: parameters, old_lambdef, lambdef
 : star_fpdef_COMMA pick_STAR_DOUBLESTAR
@@ -139,27 +162,26 @@ fplist // Used in: fpdef
 : fpdef star_fpdef_notest
 ;
 stmt // Used in: pick_NEWLINE_stmt, plus_stmt
-: simple_stmt 
-| compound_stmt
+: simple_stmt {$$ = $1;}
+| compound_stmt {$$ = $1;}
 ;
 simple_stmt // Used in: single_input, stmt, suite
-: small_stmt small_stmt_STAR_OR_SEMI NEWLINE
+: small_stmt small_stmt_STAR_OR_SEMI NEWLINE {$$ = $1;}
 ;
 small_stmt // Used in: simple_stmt, small_stmt_STAR_OR_SEMI
-: expr_stmt 
-| print_stmt
-| del_stmt
-| pass_stmt
-| flow_stmt
-| import_stmt
-| global_stmt
-| exec_stmt
-| assert_stmt
+: expr_stmt {$$ = $1;}
+| print_stmt {$$ = $1;}
+| del_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| pass_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| flow_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| import_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| global_stmt 
+| exec_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| assert_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 expr_stmt // Used in: small_stmt
 : testlist augassign pick_yield_expr_testlist 
 {
-
 	if ($1->getNodetype()=='N')
 	{
 		//!!Build a ASTNODE for the RHS. ~40min.
@@ -173,53 +195,28 @@ expr_stmt // Used in: small_stmt
 			case PERCENTEQUAL: nt='%';     break;
 			case DOUBLESLASHEQUAL: nt='d'; break;
 		}
-
+		if (rt!='i' && rt != 'f') { throw "NameError: the name is not defined"; }
 		Ast* rhsAst = new AstNode(nt, nodeid++,rt,$1,$3);
-		if (rt=='i')        { v = evalInt(rhsAst);    }
-		else if(rt == 'f')	{ v = evalFloat(rhsAst); }
-		else { throw "NameError: the name is not defined"; }
-		//因为这个变量在这种情况下一定存在，所以更新下就好。
-		stlptr->lookup_symbol($1->getName())->setReturntype(rt);
-		stlptr->lookup_symbol($1->getName())->set_value(v);		
+		$$ = new AstAss('A', ++nodeid, rt, "aug_ass", $1, rhsAst);	
 	}
 	else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
 	{
 		throw "SyntaxError: can't assign to literal";
-	}			   
-
-
-
+	}
 }
 | testlist star_EQUAL
-{    
-		if($1->getNodetype()=='N')  //Handle the exception.
-		{
-			rt = $2->getReturntype();
-
-			if (rt=='i')        { v = evalInt($2);    }
-			else if(rt == 'f')	{ 
-				                   v = evalFloat($2);
-				                   // std::cout<<"evalFloat($2): "<<v <<std::endl; 
-				                }
-			else { throw "NameError: the name is not defined"; }
-			//！！这里果然是直接用指针去改的符号表里面的内容，不是很稳妥，后面可以考虑用符号表改
-			//！！上面的高级赋值也是一样的。
-			$1->setReturntype(rt);
-			//！！注意，这里赋值浮点数可能有问题！！
-			$1->set_value(v);
-			// std::cout<<"$1->set_value(v)， v = "<<v<<", $1->get_value()= "<<$1->get_value() <<std::endl;
-			//看好了，这里要更新符号表了！！(⊙o⊙)
-			stlptr->update_symbol($1->getName(), $1);
-			//！！这里看下存表情况
-			// std::cout<<stlptr->lookup_symbol($1->getName())->getReturntype()<<std::endl;
-			// std::cout<<stlptr->lookup_symbol($1->getName())->get_value()<<std::endl;
-			// std::cout<<stlptr->lookup_symbol($1->getName())->getName()<<std::endl;
-		}
-		else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
-		{
-			throw "SyntaxError: can't assign to literal";
-		}
-	}	
+{ 
+	if($1->getNodetype()=='N')  //Handle the exception.
+	{
+		rt = $2->getReturntype();
+		if (rt!='i' && rt != 'f')    { throw "NameError: the name is not defined"; }
+	}
+	else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
+	{
+		throw "SyntaxError: can't assign to literal";
+	}
+	$$ = new AstAss('A', ++nodeid, rt, "basic_ass", $1, $2);
+}	
 pick_yield_expr_testlist // Used in: expr_stmt, star_EQUAL
 : yield_expr
 | testlist {$$ = $1;}
@@ -243,6 +240,7 @@ star_EQUAL // Used in: expr_stmt, star_EQUAL
 {    
 	//!!TO PROCESS
 	$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
+	//$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");
 	// std::cout<<"%empty: "<< yytext <<std::endl;
 }
 ;
@@ -264,22 +262,13 @@ print_stmt // Used in: small_stmt
 : PRINT opt_test
 {
 	if ($2->getNodetype()=='N'&&$2->getReturntype()=='u') {throw "NameError: the name is not defined";}
-    	//std::cout<<$2<<std::endl;
-	if ($2->getReturntype()=='i'){
-    		//std::cout << "evalInt($2)" << std::endl;
-		std::cout << ">>> " << evalInt($2) << std::endl;
-	}
-	else if ($2->getReturntype()=='f'){
-    		//std::cout << "evalFloat($2)" << std::endl;
-		std::cout << ">>> " <<std::defaultfloat << std::setprecision(12) << evalFloat($2) << std::endl;
-	}
-
+    	$$ = new AstPrint('P', ++nodeid, $2->getReturntype(), "PRINT",$2 );
 	treeFree($2);    	
 	//!!后面再考虑这个内存管理的问题
 	//SymbolTable::free_table();
     	//std::cout << ">>> ";
 }
-| PRINT RIGHTSHIFT test opt_test_2
+| PRINT RIGHTSHIFT test opt_test_2 {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 opt_test // Used in: print_stmt
 : test star_COMMA_test {$$ = $1;}
@@ -383,14 +372,14 @@ assert_stmt // Used in: small_stmt
 | ASSERT test
 ;
 compound_stmt // Used in: single_input, stmt
-: if_stmt
-| while_stmt
-| for_stmt
-| try_stmt
-| with_stmt
-| funcdef
-| classdef
-| decorated
+: if_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| while_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| for_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| try_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| with_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| funcdef {$$ = $1;}
+| classdef {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| decorated {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 if_stmt // Used in: compound_stmt
 : IF test COLON suite star_ELIF ELSE COLON suite
@@ -449,12 +438,12 @@ opt_AS_COMMA // Used in: except_clause
 ;
 suite // Used in: funcdef, if_stmt, star_ELIF, while_stmt, for_stmt, 
       // try_stmt, plus_except, opt_ELSE, opt_FINALLY, with_stmt, classdef
-: simple_stmt
-| NEWLINE INDENT plus_stmt DEDENT
+: simple_stmt {std::cout<<"suite :   simple_stmt   " <<std::endl; $$ = new AstVoid('0',++nodeid,'u',"NOWARNING"); }
+| NEWLINE INDENT plus_stmt DEDENT { $$ = $3;}
 ;
 plus_stmt // Used in: suite, plus_stmt
-: stmt plus_stmt
-| stmt
+: stmt plus_stmt {vec.push_back($1); $$ = $2; }
+| stmt { vec.push_back($1); $$ = new AstSuite('S', ++nodeid, 'U', fname);  }
 ;
 testlist_safe // Used in: list_for
 : old_test plus_COMMA_old_test
@@ -571,23 +560,6 @@ term // Used in: arith_expr, term
 			case DOUBLESLASH: $$ = new AstNode('d', nodeid++, rt,$1,$3); 
 			break;
 		}		
-		// switch($2)
-		// {
-		// 	case STAR: $$ = $1 * $3; break;
-		// 	case SLASH:            
-		// 	           if($3==0) {std::cout<<"ZeroDivisionError"<<std::endl; $$=0; break;}
-		// 	           else if ($1*$3>=0) {$$=$1/$3; break;}
-		// 	           else if ($1*$3<0) {$$=floor(1.0*$1/$3); break;}
-		// 	case PERCENT: 
-		//                if($3==0) {std::cout<<"ZeroDivisionError"<<std::endl; $$=0; break;}
-		// 	           else if ($1*$3>=0) {$$=$1%$3; break;}
-		// 	           else if ($1<0) {$$ = $1 - $3*floor(1.0*$1/$3); break;}
-		// 	           else if ($3<0) {$$ = $1 - $3*floor(1.0*$1/$3); break;}
-		// 	case DOUBLESLASH: 
-		// 			   if($3==0) {std::cout<<"ZeroDivisionError"<<std::endl; $$=0; break;}
-		// 	           else if ($1*$3>=0) {$$=$1/$3; break;}
-		// 	           else if ($1*$3<0) {$$=floor(1.0*$1/$3); break;}
-		// }
 	}
 	;
 pick_multop // Used in: term
@@ -658,12 +630,12 @@ atom // Used in: power //TO ADD AST VERSION.!!
 			// std::cout<<"(stlptr->find_symbol(yytext))<0"<<std::endl;
 			$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
 		}
-		}		     		      
-		| FLOATNUMBER {
-			            $$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); 
+	}		     		      
+	| FLOATNUMBER {
+		$$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); 
 	                    // std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext);
-	                  } 
-		| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext)); } 
+	} 
+	| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext)); } 
 	| plus_STRING {$$ = $1;} //!!TO MODIFY
 	;
 pick_yield_expr_testlist_comp // Used in: opt_yield_test
