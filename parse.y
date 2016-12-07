@@ -17,7 +17,7 @@
     char nt; //Node type
     double v; //value of the variable
     string fname;
-    string FLAG ="not defining";
+    int FLAG =0;
     std::list<Ast* > VEC;
     int yylex (void);
     extern int yylineno;
@@ -80,7 +80,7 @@ single_input // Used in: start
 : NEWLINE {std::cout << "IN NEWLINE to single_input" << std::endl; $$ = new AstVoid('0',++nodeid,'u',"NEWLINE");}
 | stmt {
 	std::cout << "IN stmt to single_input" << std::endl;
-	std::cout << "Node type:  " <<$1->getNodetype()  << std::endl;
+	//std::cout << "Node type:  " <<$1->getNodetype()  << std::endl;
 	//eval($1);
 }
 ;
@@ -118,7 +118,7 @@ funcdef // Used in: decorated, compound_stmt
 : DEF NAME 
 {
 	VEC.erase(VEC.begin(),VEC.end());
-	FLAG="defining";
+	FLAG+=1;
 	std::cout<<"vector erased!  FLAG is "<<FLAG<<std::endl;
 	// std::cout<<"name is: "<<*$2<<std::endl;
 	fname=*$2;
@@ -135,7 +135,7 @@ parameters COLON suite
       }
 
 	Ast* astSuite = new AstSuite('S', ++nodeid, 'U', fname,v);  
-	std::cout<<"Copy the vec to suite's vector!"<<std::endl;
+	//std::cout<<"Copy the vec to suite's vector!"<<std::endl;
 	// std::cout<<"The size of the vector to cp is:   "<<VEC.size()<<std::endl;
 
 	//copy the vec to suite's vector
@@ -158,14 +158,14 @@ parameters COLON suite
 	// 	// }	
 	// 	++it;	
 	// }
-	std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
+	//std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
 	//Store the function into the symbol table
 	//！！在这里完成定义更新符号表，还是在上面？先在上面用eval试试。
 	//stlptr->update_symbol(*$2, new AstFunction('F', ++nodeid, 'U', *$2, $6));
 	// std::cout<<"input name is: "<<fname<<std::endl;
 	Ast * astFun = new AstFunction('F', ++nodeid, 'U', fname, astSuite); 
 	eval(astFun);
-	FLAG="not defining";
+	FLAG-=1;
 	std::cout<<"Defined!  FLAG is "<<FLAG<<std::endl;
 	$$ = 0;
 }
@@ -205,7 +205,7 @@ stmt // Used in: pick_NEWLINE_stmt, plus_stmt
 : simple_stmt { 
 	std::cout << "IN simple_stmt to stmt" << std::endl; 
 	$$ = $1; 
-	if (FLAG=="not defining")
+	if (FLAG==0)
 	{
 		eval($1);
 	}	
@@ -291,13 +291,13 @@ star_EQUAL // Used in: expr_stmt, star_EQUAL
 	{			
 		$2 = $3;
 		$$ = $2;
-		 std::cout<<"$2->getNodetype()=='N'&&$3!=0"<< yytext <<std::endl;
+		//std::cout<<"$2->getNodetype()=='N'&&$3!=0"<< yytext <<std::endl;
 		// std::cout<<"$2->getNodetype()=='N'&&$2->getReturntype()=='u'"<< yytext <<std::endl;
 	}
 	else 
 	{
 		$$ = $2;
-		std::cout<<"$$ = $2;"<< yytext <<std::endl;
+		//std::cout<<"$$ = $2;"<< yytext <<std::endl;
 	}		
 }
 | %empty 
@@ -306,7 +306,7 @@ star_EQUAL // Used in: expr_stmt, star_EQUAL
 	//$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
 	// $$ = new AstVoid('0',++nodeid,'u',"NOWARNING");
 	$$ = 0;
-	std::cout<<"%empty: "<< yytext <<std::endl;
+	// std::cout<<"%empty: "<< yytext <<std::endl;
 }
 ;
 augassign // Used in: expr_stmt
@@ -452,7 +452,9 @@ compound_stmt // Used in: single_input, stmt
 | for_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 | try_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 | with_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
-| funcdef {$$ = $1; std::cout << "IN funcdef" << std::endl;}
+| funcdef {$$ = $1; 
+	std::cout << "IN funcdef" << std::endl;
+}
 | classdef {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 | decorated {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;

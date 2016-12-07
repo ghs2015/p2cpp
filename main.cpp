@@ -6,7 +6,7 @@ extern int yyparse();
 
 int main() {
   try {
-    std::cout << ">>> "; 
+    // std::cout << ">>> "; 
     int returnCode = yyparse();    
     std::cout << std::endl;
     return returnCode;
