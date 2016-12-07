@@ -9,6 +9,7 @@
   // #include "SymbolTable.h"
   #include "ast.h"
   #include <iomanip>
+  #include <list>
 
 	
     int nodeid = 0; //Give each node a unique id 
@@ -16,7 +17,8 @@
     char nt; //Node type
     double v; //value of the variable
     string fname;
-    std::vector<Ast* > vec;
+    string FLAG ="not defining";
+    std::list<Ast* > VEC;
     int yylex (void);
     extern int yylineno;
     extern char *yytext;
@@ -27,7 +29,7 @@
 //ZX+:Define types for the yylval
     %union {
     	Ast* ast;
-	double d;    	
+    	double d;    	
     	char* n[512];
     	int i;
     }
@@ -58,10 +60,10 @@
     %type <i> pick_unop pick_PLUS_MINUS pick_multop augassign   
     %type <ast> pick_yield_expr_testlist pick_yield_expr_testlist_comp opt_yield_test testlist_comp testlist funcdef
     %type <ast> opt_test test or_test and_test not_test comparison pick_NEWLINE_stmt
-    %type <ast> expr xor_expr and_expr shift_expr arith_expr parameters
-    %type <ast> term factor power atom listmaker dictorsetmaker 
+    %type <ast> expr xor_expr and_expr shift_expr arith_expr parameters yield_stmt
+    %type <ast> term factor power atom listmaker dictorsetmaker flow_stmt return_stmt
     %type <ast> expr_stmt star_EQUAL testlist1 plus_STRING suite plus_stmt global_stmt
-    %type <ast> yield_expr lambdef opt_listmaker opt_dictorsetmaker compound_stmt
+    %type <ast> yield_expr lambdef opt_listmaker opt_dictorsetmaker compound_stmt break_stmt continue_stmt raise_stmt
     %%
 
     start
@@ -93,7 +95,7 @@ star_NEWLINE_stmt // Used in: file_input, star_NEWLINE_stmt
 : pick_NEWLINE_stmt star_NEWLINE_stmt {
 	std::cout << "IN pick_NEWLINE_stmt star_NEWLINE_stmt" << std::endl;
 	$$ = $1;
-             }
+}
 | %empty {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING"); std::cout << "%empty to star_NEWLINE_stmt";}
 ;
 decorator // Used in: decorators
@@ -115,26 +117,57 @@ decorated // Used in: compound_stmt
 funcdef // Used in: decorated, compound_stmt
 : DEF NAME 
 {
-	vec.erase(vec.begin(),vec.end());	
+	VEC.erase(VEC.begin(),VEC.end());
+	FLAG="defining";
+	std::cout<<"vector erased!  FLAG is "<<FLAG<<std::endl;
+	// std::cout<<"name is: "<<*$2<<std::endl;
+	fname=*$2;
+	// std::cout<<"fname is: "<<fname<<std::endl;
 } 
 parameters COLON suite 
 {
+      std::vector<Ast*> v;
+
+      std::list<Ast*> :: iterator it = VEC.begin();
+      while (it!=VEC.end()){
+        v.push_back(deepcopy(*it));
+        ++it;
+      }
+
+	Ast* astSuite = new AstSuite('S', ++nodeid, 'U', fname,v);  
+	std::cout<<"Copy the vec to suite's vector!"<<std::endl;
+	// std::cout<<"The size of the vector to cp is:   "<<VEC.size()<<std::endl;
+
 	//copy the vec to suite's vector
-	std::vector<Ast* > :: iterator it;
-	it = vec.begin();
-	while (it!=vec.end())
-	{
-		if((*it)->getNodetype()=='R')
-		{
-			$6->set_return(*it);
-			break;
-		}
-		else{
-			$6->push_back(*it);
-			++it;
-		}		
-	}
-	$$ = new AstFunction('F', ++nodeid, 'U', *$2, $6);	 
+	// std::vector<Ast* > :: iterator it;
+	// it = VEC.begin();
+	// while (it!=VEC.end())
+	// {
+	// 	astSuite->push_back(*it);
+	// 	std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
+	// 	std::cout<<"Push push!  "<<  (*it)->getNodetype() <<std::endl;
+	// 	//astSuite->getVec().size()<<
+	// 	// if((*it)->getNodetype()=='R')
+	// 	// {
+	// 	// 	astSuite->set_return(*it);
+	// 	// 	break;
+	// 	// }
+	// 	// else{
+	// 	// 	astSuite->push_back(*it);
+	// 	// 	++it;
+	// 	// }	
+	// 	++it;	
+	// }
+	std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
+	//Store the function into the symbol table
+	//！！在这里完成定义更新符号表，还是在上面？先在上面用eval试试。
+	//stlptr->update_symbol(*$2, new AstFunction('F', ++nodeid, 'U', *$2, $6));
+	// std::cout<<"input name is: "<<fname<<std::endl;
+	Ast * astFun = new AstFunction('F', ++nodeid, 'U', fname, astSuite); 
+	eval(astFun);
+	FLAG="not defining";
+	std::cout<<"Defined!  FLAG is "<<FLAG<<std::endl;
+	$$ = 0;
 }
 ;
 parameters // Used in: funcdef
@@ -169,9 +202,20 @@ fplist // Used in: fpdef
 : fpdef star_fpdef_notest
 ;
 stmt // Used in: pick_NEWLINE_stmt, plus_stmt
-: simple_stmt { std::cout << "IN simple_stmt to stmt" << std::endl; $$ = $1; eval($1);
+: simple_stmt { 
+	std::cout << "IN simple_stmt to stmt" << std::endl; 
+	$$ = $1; 
+	if (FLAG=="not defining")
+	{
+		eval($1);
+	}	
 }
-| compound_stmt { std::cout << "IN compound_stmt" << std::endl; $$ = $1;}
+| compound_stmt { 
+	std::cout << "IN compound_stmt" << std::endl; 
+	$$ = $1;
+	// eval($1);
+	// FLAG="not defining";
+}
 ;
 simple_stmt // Used in: single_input, stmt, suite
 : small_stmt small_stmt_STAR_OR_SEMI NEWLINE { std::cout << "IN small_stmt small_stmt_STAR_OR_SEMI NEWLINE" << std::endl; $$ = $1;}
@@ -181,7 +225,11 @@ small_stmt // Used in: simple_stmt, small_stmt_STAR_OR_SEMI
 | print_stmt {std::cout << "IN print_stmt" << std::endl; $$ = $1; }
 | del_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 | pass_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
-| flow_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
+| flow_stmt {
+	Ast* ast = $1;
+	ast -> setNodetype('R');
+	$$ = ast;
+}
 | import_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 | global_stmt 
 | exec_stmt {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
@@ -207,23 +255,29 @@ expr_stmt // Used in: small_stmt
 		Ast* rhsAst = new AstNode(nt, nodeid++,rt,$1,$3);
 		$$ = new AstAss('A', ++nodeid, rt, "aug_ass", $1, rhsAst);	
 	}
-	else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
+	else if(($1->getNodetype()=='K'||$1->getNodetype()=='I')&&$2!=0)
 	{
 		throw "SyntaxError: can't assign to literal";
 	}
+	else if($2==0){
+		$$=$1;
+	}
 }
-| testlist star_EQUAL
+| testlist star_EQUAL 
 { 
-	if($1->getNodetype()=='N')  //Handle the exception.
+	if(($1->getNodetype()=='K'||$1->getNodetype()=='I')&&$2!=0)
+	{
+		throw "SyntaxError: can't assign to literal";
+	}
+	else if($1->getNodetype()=='N')  //Handle the exception.
 	{
 		rt = $2->getReturntype();
 		if (rt!='i' && rt != 'f')    { throw "NameError: the name is not defined"; }
+		$$ = new AstAss('A', ++nodeid, rt, "basic_ass", $1, $2);
 	}
-	else if($1->getNodetype()=='K'||$1->getNodetype()=='I')
-	{
-		throw "SyntaxError: can't assign to literal";
+	else if($2==0){
+		$$=$1;
 	}
-	$$ = new AstAss('A', ++nodeid, rt, "basic_ass", $1, $2);
 }	
 pick_yield_expr_testlist // Used in: expr_stmt, star_EQUAL
 : yield_expr
@@ -232,24 +286,27 @@ pick_yield_expr_testlist // Used in: expr_stmt, star_EQUAL
 star_EQUAL // Used in: expr_stmt, star_EQUAL
 : EQUAL pick_yield_expr_testlist star_EQUAL 
 {
-	if ($2->getNodetype()=='N'&&$2->getReturntype()=='u')
+	// if ($2->getNodetype()=='N'&&$2->getReturntype()=='u')
+	if ($2->getNodetype()=='N'&&$3!=0)
 	{			
 		$2 = $3;
 		$$ = $2;
-		 std::cout<<"$2->getNodetype()=='N'&&$2->getReturntype()=='u'"<< yytext <<std::endl;
+		 std::cout<<"$2->getNodetype()=='N'&&$3!=0"<< yytext <<std::endl;
+		// std::cout<<"$2->getNodetype()=='N'&&$2->getReturntype()=='u'"<< yytext <<std::endl;
 	}
 	else 
 	{
 		$$ = $2;
-		 std::cout<<"$$ = $2;"<< yytext <<std::endl;
+		std::cout<<"$$ = $2;"<< yytext <<std::endl;
 	}		
 }
 | %empty 
 {    
 	//!!TO PROCESS
-	$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
-	//$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");
-	 std::cout<<"%empty: "<< yytext <<std::endl;
+	//$$ = new AstName('N', nodeid++, 'u', yytext, 0); 
+	// $$ = new AstVoid('0',++nodeid,'u',"NOWARNING");
+	$$ = 0;
+	std::cout<<"%empty: "<< yytext <<std::endl;
 }
 ;
 augassign // Used in: expr_stmt
@@ -269,21 +326,24 @@ augassign // Used in: expr_stmt
 print_stmt // Used in: small_stmt
 : PRINT opt_test
 {
-	std::cout << "IN PRINT" << std::endl;
-	std::cout <<"Node type:  " << $2->getNodetype() << std::endl;
-	std::cout <<"Node Value:  " << eval($2)->getIntNumber() << std::endl;
-	if ($2->getNodetype()=='N'&&$2->getReturntype()=='u') {throw "NameError: the name is not defined";}
-    	$$ = new AstPrint('P', ++nodeid, $2->getReturntype(), "PRINT",$2 );
+	// std::cout << "IN PRINT" << std::endl;
+	// std::cout <<"Node type:  " << $2->getNodetype() << std::endl;
+	// std::cout <<"Node Value:  " << eval($2)->getIntNumber() << std::endl;
+	// if ($2->getNodetype()=='N'&&$2->getReturntype()=='u') {throw "NameError: the name is not defined";}
+	$$ = new AstPrint('P', ++nodeid, $2->getReturntype(), "PRINT",$2 );
 	// treeFree($2);    	
 	//!!后面再考虑这个内存管理的问题
 	//SymbolTable::free_table();
-    	
+
 }
 | PRINT RIGHTSHIFT test opt_test_2 {$$ = new AstVoid('0',++nodeid,'u',"NOWARNING");}
 ;
 opt_test // Used in: print_stmt
-: test star_COMMA_test {$$ = $1;}
-| %empty {}
+: test star_COMMA_test {
+	// std::cout<<"test star_COMMA_test --->>>opt_test GOGOGO!"<<std::endl;
+	$$ = $1;
+}
+| %empty {$$=0;}
 ;
 opt_test_2 // Used in: print_stmt
 : plus_COMMA_test
@@ -298,26 +358,30 @@ pass_stmt // Used in: small_stmt
 flow_stmt // Used in: small_stmt
 : break_stmt
 | continue_stmt
-| return_stmt
+| return_stmt { $$ = $1; }
 | raise_stmt
 | yield_stmt
 ;
 break_stmt // Used in: flow_stmt
-: BREAK
+: BREAK {$$=0;}
 ;
 continue_stmt // Used in: flow_stmt
-: CONTINUE
+: CONTINUE {$$=0;}
 ;
 return_stmt // Used in: flow_stmt
-: RETURN testlist
-| RETURN
+: RETURN testlist {
+	$$ = $2;
+}
+| RETURN {
+	$$ = new AstReturn('R',++nodeid, 'U', "return", 0) ;
+}
 ;
 yield_stmt // Used in: flow_stmt
 : yield_expr
 ;
 raise_stmt // Used in: flow_stmt
-: RAISE test opt_test_3
-| RAISE
+: RAISE test opt_test_3 {$$=0;}
+| RAISE {$$=0;}
 ;
 opt_COMMA_test // Used in: opt_test_3, exec_stmt
 : COMMA test
@@ -372,7 +436,7 @@ dotted_name // Used in: decorator, import_from, dotted_as_name, dotted_name
 ;
 global_stmt // Used in: small_stmt, global_stmt
 : global_stmt COMMA NAME
-| GLOBAL NAME
+| GLOBAL NAME {$$=0;}
 ;
 exec_stmt // Used in: small_stmt
 : EXEC expr IN test opt_COMMA_test
@@ -449,12 +513,32 @@ opt_AS_COMMA // Used in: except_clause
 ;
 suite // Used in: funcdef, if_stmt, star_ELIF, while_stmt, for_stmt, 
       // try_stmt, plus_except, opt_ELSE, opt_FINALLY, with_stmt, classdef
-: simple_stmt {std::cout<<"suite :   simple_stmt   " <<std::endl; $$ = new AstVoid('0',++nodeid,'u',"NOWARNING"); }
-| NEWLINE INDENT plus_stmt DEDENT { $$ = $3; std::cout << "IN NEWLINE INDENT plus_stmt DEDENT" << std::endl;}
+: simple_stmt {
+	std::cout<<"suite -->> simple_stmt   " <<std::endl; 
+	//$$ = new AstVoid('0',++nodeid,'u',"NOWARNING"
+	$$=0;		
+}
+//!!??这里是干哈的？
+| NEWLINE INDENT plus_stmt DEDENT {             
+	std::cout << "IN NEWLINE INDENT plus_stmt DEDENT" << std::endl;
+	// $$ = $3;
+	$$ =0;
+}
 ;
 plus_stmt // Used in: suite, plus_stmt
-: stmt plus_stmt {vec.push_back($1); $$ = $2; std::cout << "IN stmt plus_stmt to plus_stmt" << std::endl;}
-| stmt { std::cout << "IN stmt to plus_stmt" << std::endl;  vec.push_back($1); $$ = new AstSuite('S', ++nodeid, 'U', fname);  }
+: stmt plus_stmt {
+	VEC.push_front($1); 
+	std::cout << "IN stmt plus_stmt to plus_stmt" << std::endl;
+	//$$ = $1;
+	$$ =0;
+}
+| stmt { 
+	std::cout << "IN stmt to plus_stmt" << std::endl;  
+	VEC.push_front($1); 
+	//$$ = new AstSuite('S', ++nodeid, 'U', fname);  
+	//$$= $1;
+	$$ =0;
+}
 ;
 testlist_safe // Used in: list_for
 : old_test plus_COMMA_old_test
@@ -517,16 +601,22 @@ expr // Used in: exec_stmt, with_item, comparison, expr,
 | expr BAR xor_expr
 ;
 xor_expr // Used in: expr, xor_expr
-: and_expr {$$ = $1;}
+: and_expr {
+	// std::cout<<"and_expr GOGOGO!"<<std::endl;
+
+	$$ = $1;}
 | xor_expr CIRCUMFLEX and_expr
 ;
 and_expr // Used in: xor_expr, and_expr
-: shift_expr {$$ = $1;}
+: shift_expr {
+	// std::cout<<"shift_expr GOGOGO!"<<std::endl; 
+	$$ = $1;}
 | and_expr AMPERSAND shift_expr
 ;
 shift_expr // Used in: and_expr, shift_expr
 : arith_expr
 {
+	// std::cout<<"arith_expr GOGOGO!"<<std::endl;
 	$$ = $1;
 }
 | shift_expr pick_LEFTSHIFT_RIGHTSHIFT arith_expr
@@ -536,7 +626,9 @@ pick_LEFTSHIFT_RIGHTSHIFT // Used in: shift_expr
 | RIGHTSHIFT
 ;
 arith_expr // Used in: shift_expr, arith_expr
-: term {$$ = $1;}
+: term {$$ = $1; 
+	// std::cout<<"term GOGOGO!"<<std::endl;
+}
 | arith_expr pick_PLUS_MINUS term
 {
 	rt=($1->getReturntype()=='i'&&$3->getReturntype()=='i'?'i':'f');
@@ -556,7 +648,9 @@ pick_PLUS_MINUS // Used in: arith_expr
 | MINUS {$$ = MINUS;}
 ;
 term // Used in: arith_expr, term
-: factor {$$ = $1;}
+: factor {$$ = $1; 
+	// std::cout<<"factor GOGOGO!"<<std::endl;
+}
 	| term pick_multop factor //TO ADD AST VERSION!!
 	{
 		rt=($1->getReturntype()=='i'&&$3->getReturntype()=='i'?'i':'f');
@@ -595,7 +689,9 @@ factor // Used in: term, factor, power
 			//case TILDE: $$ = (-$2) - 1; break; //TO ADD AST!!
 	}
 }
-| power {$$ = $1;}
+| power {$$ = $1; 
+	// std::cout<<"power GOGOGO!"<<std::endl; 
+}
 ;
 pick_unop // Used in: factor
 : PLUS {$$ = PLUS;}
@@ -611,11 +707,18 @@ power // Used in: factor
 	}
 	$$ = new AstNode('^', nodeid++, rt,$1,$4);
 }
-| atom star_trailer { $$ = $1;}
+| atom star_trailer { 
+	$$ = $1;
+	// std::cout<<"ATOM GOGOGO!"<<std::endl;
+}
 ;
 star_trailer // Used in: power, star_trailer
-: trailer star_trailer { }
-| %empty
+: trailer star_trailer { 
+	// std::cout<<"trailer star_trailer GOGOGO!"<<std::endl; 
+}
+| %empty {
+	// std::cout<<"KONGKONG GOGOGO!"<<std::endl;
+}
 ;
 atom // Used in: power //TO ADD AST VERSION.!!
 : LPAR opt_yield_test RPAR {$$ = $2;}
@@ -629,17 +732,18 @@ atom // Used in: power //TO ADD AST VERSION.!!
 		std::cout<<yytext<<std::endl;
 		if((stlptr->find_symbol(yytext))>=0)
 		{
-			 std::cout<<"(stlptr->find_symbol(yytext))>=0"<<std::endl;
+			std::cout<<"(stlptr->find_symbol(yytext))>=0"<<std::endl;
 		    //!!这里可能需要用deep copy~0.5h 返回一个新Node.现场来一个。
 			nt = stlptr->lookup_symbol(yytext)->getNodetype();
 			rt = (stlptr->lookup_symbol(yytext))->getReturntype();
-                                      if (nt=='F'){
-                                      	$$ = new AstCall('C', nodeid++, rt, yytext);
-                                      }
-                                      else if (nt=='N'){
-                                      	v =  (stlptr->lookup_symbol(yytext))->get_value();
-                                      	$$ = new AstName('N', nodeid++, rt, yytext, v);
-                                      }
+			if (nt=='F'){
+				$$ = new AstCall('C', nodeid++, rt, yytext);
+				// std::cout<<"AstCall GOGOGO!"<<std::endl;
+			}
+			else if (nt=='N'){
+				v =  (stlptr->lookup_symbol(yytext))->get_value();
+				$$ = new AstName('N', nodeid++, rt, yytext, v);
+			}
 		}
 		else
 		{
@@ -650,10 +754,10 @@ atom // Used in: power //TO ADD AST VERSION.!!
 	}		     		      
 	| FLOATNUMBER {
 		$$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); 
-	                     std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext)<<std::endl;
+		std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext)<<std::endl;
 	} 
 	| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext));
-	  std::cout<<"yytext: "<<yytext<<"  atoi(yytext): "<< atoi(yytext)<<std::endl; } 
+	std::cout<<"yytext: "<<yytext<<"  atoi(yytext): "<< atoi(yytext)<<std::endl; } 
 	| plus_STRING {$$ = $1;} //!!TO MODIFY
 	;
 pick_yield_expr_testlist_comp // Used in: opt_yield_test
@@ -689,7 +793,9 @@ lambdef // Used in: test
 	| LAMBDA COLON test {$$=$3;} //!!TO MODIFY
 	;
 trailer // Used in: star_trailer
-: LPAR opt_arglist RPAR 
+: LPAR opt_arglist RPAR {
+	// std::cout<<"( optional parameters ) GOGOGO!"<<std::endl;
+}
 | LSQB subscriptlist RSQB
 | DOT NAME
 ;

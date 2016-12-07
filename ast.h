@@ -16,6 +16,7 @@ public:
 	Ast(char n, int id, char rt) : nodetype(n), nodeid(id), returntype(rt) {}
 	virtual ~Ast() {}
 	char getNodetype() const { return nodetype; }
+	void setNodetype(char nt)  { nodetype = nt; }
 	int getNodeid() const { return nodeid;}
 	char getReturntype() const { return returntype;}
 	void setReturntype(char nrt) {returntype = nrt;}
@@ -116,9 +117,8 @@ public:
 	AstPrint(char nodetype,int id,char rt,std::string n,Ast* ast) : Ast(nodetype,id,rt), name(n),toPrint(ast) {}
 	virtual ~AstPrint(){}
 	virtual Ast* get_toPrint() {return toPrint;}
-  //!!这要对<<进行操作符重载啊。。。~0.5h
-  //！！目前还是eval()里面print吧
   //virtual void print_ast() { std::cout<<eval(toPrint)<<std:endl; }
+	virtual std::string getName() const { return name; }
 private:
 	std::string name;
 	Ast* toPrint;
@@ -126,12 +126,11 @@ private:
 //!! AstAss To validate
 class AstAss: public Ast {
 public:
-	AstAss(char nodetype,int id,char rt,\
-		std::string n, Ast* la, Ast* ra): \
-	Ast(nodetype,id,rt), name(n),l(la),r(ra) {}
+	AstAss(char nodetype,int id,char rt, std::string n, Ast* la, Ast* ra):	Ast(nodetype,id,rt), name(n),l(la),r(ra) {}
 	virtual ~AstAss(){}
 	virtual Ast* getLeft() const  { return l; }
 	virtual Ast* getRight() const { return r; }
+	virtual std::string getName() const { return name; }
 private:
 	std::string name;
 	Ast* l;
@@ -142,11 +141,12 @@ private:
 	//store the stmts in a suite by a vector
 class AstSuite : public Ast {
 public:
-	AstSuite(char nodetype, int id, char rt, std::string n) : Ast(nodetype,id,rt), name(n){}
+	AstSuite(char nodetype, int id, char rt, std::string n, std::vector<Ast*> v) : Ast(nodetype,id,rt), name(n), vec(v){}
 	virtual ~AstSuite(){}
 	virtual std::string getName() const { return name; }
-	virtual std::vector<Ast*> get_vector() const { return vec;}
-	virtual void push_back(Ast* ast) {vec.push_back(ast);}
+	 
+	virtual std::vector<Ast*> getVec() const { return vec;}
+	virtual void push_back(Ast* ast) {vec.push_back(ast); std::cout<<"Pushing once."<<std::endl;}
 	virtual Ast* get_return() const {return astReturn;}
 	virtual void set_return(Ast* ast){astReturn = ast;}
 private:
@@ -198,6 +198,7 @@ Ast*   evalSuite(Ast* ast);
 Ast*   evalCall(Ast* ast);
 Ast*   evalPrint(Ast* ast);
 void   treeFree(Ast*); // delete and free an AST 
+Ast*   deepcopy(Ast* ast);
 
 std::ostream& operator <<(std::ostream& os, const Ast * ast);
 

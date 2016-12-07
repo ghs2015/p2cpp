@@ -1,16 +1,18 @@
 #include "STLeader.h"
 #include <iostream>
-
+using namespace std;
 //??Significance 
 STLeader* STLeader::stlptr = 0;
 
 //Get the global pointer to the only instance of STLeader.
 STLeader* STLeader::get_stlptr(){
 	if (!stlptr){
-		stlptr = new STLeader;	
+		stlptr = new STLeader;
+		cout<< "Stlptr is initialized!"<<endl;
 		stlptr->set_scope(-1);
 		stlptr->push_scope();
 	}
+	cout<< "Current scope is "<< stlptr-> get_scope()<<endl;
 	return stlptr;
 }
 
@@ -42,6 +44,8 @@ Ast* STLeader::lookup_symbol(string name){
 
 void STLeader::update_symbol(string name, Ast* n){
 	 // sts[currentScope].update_symbol(name, n);
+	cout<< "SymbolTable: "<< currentScope <<" is updated!"<<endl;
+	cout<< "    By node name: "<< name <<endl;
 	stv[currentScope].update_symbol(name, n);
 }
 
@@ -49,6 +53,7 @@ void STLeader::pop_scope(){
 	if (currentScope >= 1){
 		stv.pop_back();
 		currentScope-=1;
+		cout<< "SymbolTable "<< currentScope+1 <<" is poped!"<<endl;
 	}
 }
 
@@ -56,6 +61,7 @@ void STLeader::push_scope(){
 	currentScope+=1;
 	SymbolTable st(currentScope);
 	stv.push_back(st);
+	cout<< "SymbolTable "<< currentScope <<" is pushed!"<<endl;
 }
 
 int STLeader::get_scope(){
