@@ -19,6 +19,8 @@
     string fname;
     int FLAG =0;
     std::list<Ast* > VEC;
+    std::list<Ast* > suitelist;
+    int suiteid =-1;
     int yylex (void);
     extern int yylineno;
     extern char *yytext;
@@ -117,55 +119,40 @@ decorated // Used in: compound_stmt
 funcdef // Used in: decorated, compound_stmt
 : DEF NAME 
 {
-	VEC.erase(VEC.begin(),VEC.end());
+	// VEC.erase(VEC.begin(),VEC.end());
+	// std::list<Ast*> VEC;
 	FLAG+=1;
-	std::cout<<"vector erased!  FLAG is "<<FLAG<<std::endl;
+	// std::cout<<"vector erased!  FLAG is "<<FLAG<<std::endl;
+	std::cout<<"LAG is "<<FLAG<<std::endl;
+    std::cout<<"suitelist size is  "<<suitelist.size()<<std::endl;
 	// std::cout<<"name is: "<<*$2<<std::endl;
 	fname=*$2;
 	// std::cout<<"fname is: "<<fname<<std::endl;
+	// suiteid += 1;
+
+	suitelist.push_back(new AstSuite('S', ++nodeid, 'U', fname)) ;	
+	std::cout<<"suitelist size is  "<<suitelist.size()<<std::endl;
 } 
 parameters COLON suite 
 {
-      std::vector<Ast*> v;
+      // std::vector<Ast*> v;
 
-      std::list<Ast*> :: iterator it = VEC.begin();
-      while (it!=VEC.end()){
-        v.push_back(deepcopy(*it));
-        ++it;
-      }
+      // std::list<Ast*> :: iterator it = VEC.begin();
+      // while (it!=VEC.end()){
+      //   v.push_back(deepcopy(*it));
+      //   ++it;
+      // }
 
-	Ast* astSuite = new AstSuite('S', ++nodeid, 'U', fname,v);  
-	//std::cout<<"Copy the vec to suite's vector!"<<std::endl;
-	// std::cout<<"The size of the vector to cp is:   "<<VEC.size()<<std::endl;
+	// Ast* astSuite = new AstSuite('S', ++nodeid, 'U', fname,v);  
 
-	//copy the vec to suite's vector
-	// std::vector<Ast* > :: iterator it;
-	// it = VEC.begin();
-	// while (it!=VEC.end())
-	// {
-	// 	astSuite->push_back(*it);
-	// 	std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
-	// 	std::cout<<"Push push!  "<<  (*it)->getNodetype() <<std::endl;
-	// 	//astSuite->getVec().size()<<
-	// 	// if((*it)->getNodetype()=='R')
-	// 	// {
-	// 	// 	astSuite->set_return(*it);
-	// 	// 	break;
-	// 	// }
-	// 	// else{
-	// 	// 	astSuite->push_back(*it);
-	// 	// 	++it;
-	// 	// }	
-	// 	++it;	
-	// }
-	//std::cout<<"The size of the vector is:   "<<astSuite->getVec().size()<<std::endl;
-	//Store the function into the symbol table
-	//！！在这里完成定义更新符号表，还是在上面？先在上面用eval试试。
-	//stlptr->update_symbol(*$2, new AstFunction('F', ++nodeid, 'U', *$2, $6));
-	// std::cout<<"input name is: "<<fname<<std::endl;
-	Ast * astFun = new AstFunction('F', ++nodeid, 'U', fname, astSuite); 
+	// Ast * astFun = new AstFunction('F', ++nodeid, 'U', fname, astSuite); 
+    Ast * astFun = new AstFunction('F', ++nodeid, 'U', fname, suitelist.back()); 
 	eval(astFun);
 	FLAG-=1;
+	// suiteid -= 1;
+	std::cout<<"suitelist size is  "<<suitelist.size()<<std::endl;
+	suitelist.pop_back();
+	std::cout<<"suitelist size is  "<<suitelist.size()<<std::endl;
 	std::cout<<"Defined!  FLAG is "<<FLAG<<std::endl;
 	$$ = 0;
 }
@@ -529,14 +516,18 @@ suite // Used in: funcdef, if_stmt, star_ELIF, while_stmt, for_stmt,
 ;
 plus_stmt // Used in: suite, plus_stmt
 : stmt plus_stmt {
-	VEC.push_front($1); 
+	// VEC.push_front($1); 
+	//!!HERE DEEP COPY MAY require!
+	suitelist.back()->push_front(deepcopy($1));
 	std::cout << "IN stmt plus_stmt to plus_stmt" << std::endl;
 	//$$ = $1;
 	$$ =0;
 }
 | stmt { 
 	std::cout << "IN stmt to plus_stmt" << std::endl;  
-	VEC.push_front($1); 
+	// VEC.push_front($1); 
+	//!!HERE DEEP COPY MAY require!
+	suitelist.back()->push_front(deepcopy($1));
 	//$$ = new AstSuite('S', ++nodeid, 'U', fname);  
 	//$$= $1;
 	$$ =0;
@@ -756,10 +747,11 @@ atom // Used in: power //TO ADD AST VERSION.!!
 	}		     		      
 	| FLOATNUMBER {
 		$$ = new AstFloat('K', nodeid++, 'f', atof(yytext)); 
-		std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext)<<std::endl;
+		//std::cout<<"yytext: "<<yytext<<"  atof(yytext): "<< atof(yytext)<<std::endl;
 	} 
 	| INTEGER {$$ = new AstInteger('I', nodeid++, 'i', atoi(yytext));
-	std::cout<<"yytext: "<<yytext<<"  atoi(yytext): "<< atoi(yytext)<<std::endl; } 
+	//std::cout<<"yytext: "<<yytext<<"  atoi(yytext): "<< atoi(yytext)<<std::endl; 
+} 
 	| plus_STRING {$$ = $1;} //!!TO MODIFY
 	;
 pick_yield_expr_testlist_comp // Used in: opt_yield_test

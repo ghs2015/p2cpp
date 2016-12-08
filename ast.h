@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <list>
 extern void yyerror(const char*);
 extern void yyerror(const char*, const char);
 
@@ -30,8 +31,9 @@ public:
 
 	virtual void set_value(double v) {throw std::string("No setter");}
 	virtual double get_value() const {throw std::string("No Value");}
-	virtual std::vector<Ast*> getVec() const {throw std::string("No Vector"); }
+	virtual std::list<Ast*> getVec() const {throw std::string("No Vector"); }
 	virtual void push_back(Ast* ast) {throw std::string("No push_back()"); }
+	virtual void push_front(Ast* ast) {throw std::string("No push_front()");}
 	virtual void print_ast() { throw std::string("No print_ast()"); }
 	virtual Ast* get_toPrint() { throw std::string("No toPrint"); }
 	virtual Ast* get_suite() const { throw std::string("No suite");  }
@@ -141,18 +143,20 @@ private:
 	//store the stmts in a suite by a vector
 class AstSuite : public Ast {
 public:
-	AstSuite(char nodetype, int id, char rt, std::string n, std::vector<Ast*> v) : Ast(nodetype,id,rt), name(n), vec(v){}
+	// AstSuite(char nodetype, int id, char rt, std::string n, std::vector<Ast*> v) : Ast(nodetype,id,rt), name(n), vec(v){}
+	AstSuite(char nodetype, int id, char rt, std::string n) : Ast(nodetype,id,rt), name(n){}
 	virtual ~AstSuite(){}
 	virtual std::string getName() const { return name; }
 	 
-	virtual std::vector<Ast*> getVec() const { return vec;}
+	virtual std::list<Ast*> getVec() const { return vec;}
 	virtual void push_back(Ast* ast) {vec.push_back(ast); std::cout<<"Pushing once."<<std::endl;}
+	virtual void push_front(Ast* ast) {vec.push_front(ast); std::cout<<"Pushing front once."<<std::endl;}
 	virtual Ast* get_return() const {return astReturn;}
 	virtual void set_return(Ast* ast){astReturn = ast;}
 private:
 	std::string name;
 	Ast* astReturn;
-	std::vector<Ast*> vec;
+	std::list<Ast*> vec;
 };
 
 //AstReturn, Name is reserved as "return"

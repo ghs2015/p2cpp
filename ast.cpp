@@ -3,6 +3,7 @@
 #  include <iostream>
 #  include <stdlib.h>
 #  include <math.h>
+#  include <list>
 #  include "ast.h"
 #  include "SymbolTable.h"
 #  include "STLeader.h"
@@ -157,16 +158,14 @@ void treeFree(Ast *a) {
   }
 }
 //For calling a function
-Ast* evalCall(Ast* astCall)
+Ast* evalCall ( Ast* astCall) 
 {
-	
   Ast* astReturn;
-  std::vector<Ast*> :: iterator it ;
-  std::vector<Ast*> vec; 
-  std::cout<<"astCall->getName():    "<<astCall->getName()<<std::endl;
-  std::cout<<"stlptr ->find_symbol(astCall->getName()):     "<<stlptr ->find_symbol(astCall->getName())<<std::endl;
-  std::cout<<"vector size:     "<<stlptr -> lookup_symbol(astCall->getName()) ->get_suite()->getVec().size()<<std::endl;
-     //这里需要加一个查询语句。
+  std::list<Ast*> :: iterator it ;
+  std::list<Ast*> vec; 
+  // std::cout<<"astCall->getName():    "<<astCall->getName()<<std::endl;
+  // std::cout<<"stlptr ->find_symbol(astCall->getName()):     "<<stlptr ->find_symbol(astCall->getName())<<std::endl;
+  // std::cout<<"vector size:     "<<stlptr -> lookup_symbol(astCall->getName()) ->get_suite()->getVec().size()<<std::endl;
   if (stlptr ->find_symbol(astCall->getName())<0){ throw std::string("The function is not defined!"); }
   vec = stlptr -> lookup_symbol(astCall->getName()) ->get_suite()->getVec(); 
      //开始一个新的scope
@@ -180,8 +179,8 @@ Ast* evalCall(Ast* astCall)
   it = vec.begin();
   while(it!=vec.end()&&((*it)->getNodetype()!='R'))
   {
-    std::cout<<"IN evalCall(Ast* astCall)"<<std::endl;
-    std::cout<<"Current Node type is "<<(*it)->getNodetype()<<std::endl;
+    // std::cout<<"IN evalCall(Ast* astCall)"<<std::endl;
+    // std::cout<<"Current Node type is "<<(*it)->getNodetype()<<std::endl;
     eval(*it);
     ++it;
   }
@@ -362,13 +361,14 @@ Ast* deepcopy(Ast* a){
     //AstSuite
     //!!To consider the return node?
   case 'S':{
-    std::vector<Ast*> v;
-    std::vector<Ast*>:: iterator it = a->getVec().begin();
+    ast = new AstSuite(a->getNodetype(), a->getNodeid(),a->getReturntype(),a->getName());
+    // std::vector<Ast*> v;
+    std::list<Ast*>:: iterator it = a->getVec().begin();
     while (it!=a->getVec().end()){
-      v.push_back(deepcopy(*it));
+      ast->push_back(deepcopy(*it));
       ++it;
     }
-    ast = new AstSuite(a->getNodetype(), a->getNodeid(),a->getReturntype(),a->getName(),v);
+    
     break;
   }
     //AstReturn

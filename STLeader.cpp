@@ -44,7 +44,7 @@ Ast* STLeader::lookup_symbol(string name){
 
 void STLeader::update_symbol(string name, Ast* n){
 	 // sts[currentScope].update_symbol(name, n);
-	cout<< "SymbolTable: "<< currentScope <<" is updated!"<<endl;
+	cout<< "SymbolTable: "<< currentScope <<" is updated!";
 	cout<< "    By node name: "<< name <<endl;
 	stv[currentScope].update_symbol(name, n);
 }
